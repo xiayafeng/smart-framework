@@ -2,10 +2,14 @@ package org.smart4j.framework.util;
 
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.File;
+
 /**
  * 字符串工具类
  */
 public final class StringUtil {
+    //字符串分隔符
+    public static final String SPARATOR = String.valueOf((char) 29);
     /**
      * 判断字符串是否为空
      */

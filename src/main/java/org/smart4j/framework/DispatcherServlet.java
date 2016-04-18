@@ -1,12 +1,7 @@
 package org.smart4j.framework;
 
-import org.smart4j.framework.bean.Data;
-import org.smart4j.framework.bean.Handler;
-import org.smart4j.framework.bean.Param;
-import org.smart4j.framework.bean.View;
-import org.smart4j.framework.helper.BeanHelper;
-import org.smart4j.framework.helper.ConfigHelper;
-import org.smart4j.framework.helper.ControllerHelper;
+import org.smart4j.framework.bean.*;
+import org.smart4j.framework.helper.*;
 import org.smart4j.framework.util.*;
 
 import javax.servlet.ServletConfig;
@@ -41,42 +36,30 @@ public class DispatcherServlet extends HttpServlet {
         //注册处理静态资源的默认servlet
         ServletRegistration defaultServlet = servletContext.getServletRegistration("default");
         defaultServlet.addMapping(ConfigHelper.getAppAssetPath() + "*");
+        //初始化文件上传助手类
+        UploadHelper.init(servletContext);
     }
 
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         //获取请求方法和请求路径
-        String requestMethod = req.getMethod();
+        String requestMethod = req.getMethod().toLowerCase();
         String requestPath = req.getPathInfo();
+        if (requestPath.equals("/favicon.ico")) {
+            return;
+        }
         //获取action处理器
         Handler handler = ControllerHelper.getHandler(requestMethod, requestPath);
         if (handler != null) {
             //获取controller类和其实例
             Class<?> controllerClass = handler.getControllerClass();
             Object controllerBean = BeanHelper.getBean(controllerClass);
-            //创建请求参数对象
-            Map<String, Object> paramMap = new HashMap<String, Object>();
-            Enumeration<String> paramNames = req.getParameterNames();
-            while (paramNames.hasMoreElements()) {
-                String paramName = paramNames.nextElement();
-                String paramValue = req.getParameter(paramName);
-                paramMap.put(paramName, paramValue);
+            Param param;
+            if (UploadHelper.isMutilpart(req)) {
+                param = UploadHelper.createParam(req);
+            } else {
+                param = RequestHelper.createParam(req);
             }
-            String body = CodecUtil.decodeURL(StreamUtil.getString(req.getInputStream()));
-            if (StringUtil.isNotEmpty(body)) {
-                String[] params = body.split("&");
-                if (ArrayUtil.isNotEmpty(params)) {
-                    for (String param : params) {
-                        String[] array = param.split("=");
-                        if (ArrayUtil.isNotEmpty(array) && array.length == 2) {
-                            String paramName = array[0];
-                            String paramValue = array[1];
-                            paramMap.put(paramName, paramValue);
-                        }
-                    }
-                }
-            }
-            Param param = new Param(paramMap);
             Object result;
             //调用action方法
             Method method = handler.getAcitonMethod();
